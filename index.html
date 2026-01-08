@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesforce Dev Command Center | Pro Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+        
+        :root { 
+            --primary: #00f2ff; 
+            --secondary: #7000ff; 
+            --bg: #020617; 
+            --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); 
+            --break: #fbbf24; 
+            --danger: #ff4b2b; 
+        }
+
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background: var(--bg); 
+            color: white; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .news-ticker { background: rgba(0, 242, 255, 0.1); border-bottom: 1px solid var(--primary); padding: 8px 0; overflow: hidden; white-space: nowrap; }
+        .ticker-wrapper { display: inline-block; animation: ticker 30s linear infinite; }
+        .news-item { display: inline-block; margin-right: 40px; font-size: 0.75rem; font-weight: 600; color: var(--primary); }
+        @keyframes ticker { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+
+        .layout-wrapper { display: flex; flex-direction: row; flex: 1; }
+
+        aside { 
+            width: 320px; 
+            background: rgba(0,0,0,0.8); 
+            border-right: 1px solid var(--border); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+        }
+
+        main { 
+            flex: 1; 
+            padding: 20px; 
+            background: radial-gradient(circle at top right, #0f172a, #020617); 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+            align-content: start;
+        }
+        
+        .glass-card { background: var(--glass); border: 1px solid var(--border); border-radius: 15px; padding: 20px; position: relative; }
+
+        @media (max-width: 1024px) { main { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            .layout-wrapper { flex-direction: column; }
+            aside { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+            body { overflow-y: auto; height: auto; }
+        }
+
+        .lec-row { 
+            display: flex; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; 
+            margin-bottom: 10px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s;
+        }
+        .lec-row.completed { border-color: var(--primary); background: rgba(0, 242, 255, 0.08); }
+        .comp-icon { font-size: 1.5rem; margin-right: 12px; filter: grayscale(1); transition: 0.3s; }
+        .completed .comp-icon { filter: grayscale(0) drop-shadow(0 0 5px var(--primary)); }
+
+        .notes-area { 
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; width: 100%; 
+            min-height: 80px; color: #cbd5e1; padding: 10px; font-family: inherit; font-size: 0.9rem; resize: vertical; outline: none; 
+        }
+
+        .btn-finish { 
+            background: linear-gradient(90deg, var(--primary), var(--secondary)); 
+            color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; 
+        }
+
+        .btn-reset {
+            background: transparent; border: 1px solid rgba(255, 75, 43, 0.3); color: #64748b;
+            padding: 8px; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%; margin-top: auto;
+            transition: 0.3s; font-size: 0.75rem;
+        }
+        .btn-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+        .backlog-item { 
+            background: rgba(255, 75, 43, 0.1); border-left: 4px solid var(--danger); padding: 10px; 
+            margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="news-ticker">
+    <div class="ticker-wrapper">
+        <span class="news-item">• Salesforce AI: Agentforce revolutionizing business</span>
+        <span class="news-item">• Spring '26: New Apex features leaked</span>
+        <span class="news-item">• Data Cloud: Zero-copy integration live</span>
+    </div>
+</div>
+
+<div class="layout-wrapper">
+    <aside>
+        <h2 style="color: var(--primary); margin: 0; font-size: 1.4rem;">SF DEV CENTER</h2>
+        
+        <div class="glass-card" style="text-align: center; padding: 15px;">
+            <small style="opacity: 0.6;">TODAY'S SCORE</small>
+            <h1 id="score-text" style="font-size: 2.5rem; margin: 5px 0;">0/6</h1>
+        </div>
+
+        <div class="glass-card" style="padding: 15px;">
+            <span id="quote-display" style="font-size: 0.85rem; display: block; margin-bottom: 10px; font-style: italic;">"Code is like humor. When you have to explain it, it’s bad."</span>
+            <button onclick="newQuote()" style="background: var(--border); border: none; color: white; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.7rem; width: 100%;">REFRESH DOSE ⚡</button>
+        </div>
+
+        <button class="btn-finish" onclick="archiveDay()">END DAY & LOG</button>
+        <button class="btn-reset" onclick="resetAllData()">RESET ALL DATA ⚠️</button>
+    </aside>
+
+    <main>
+        <section>
+            <div style="margin-bottom: 15px;">
+                <h2 id="today-date" style="margin:0; font-size: 1.2rem;">Date</h2>
+                <div id="live-clock" style="color: var(--primary); font-size: 1rem; font-weight: 600;">00:00:00</div>
+            </div>
+            
+            <div class="glass-card">
+                <h3>Active Schedule</h3>
+                <div id="lecture-container"></div>
+            </div>
+        </section>
+
+        <section>
+            <div class="glass-card" style="border-color: var(--danger); margin-bottom: 20px;">
+                <h3 style="color: var(--danger);">🛑 BACKLOG</h3>
+                <div id="backlog-container"></div>
+            </div>
+
+            <div class="glass-card" style="margin-bottom: 20px;">
+                <h3>Consistency</h3>
+                <div style="height: 180px; width: 100%; position: relative;">
+                    <canvas id="statChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-card" style="border-top: 2px solid var(--primary);">
+                <h3 style="color: var(--primary);">📝 TECH WINS</h3>
+                <textarea id="dev-notes" class="notes-area" placeholder="What did you learn today?"></textarea>
+                <small id="save-status" style="color: #64748b; margin-top:5px; display:block;">Cloud Sync: Idle</small>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    let chartInstance = null;
+
+    const daySchedule = [
+        { name: "Lec 1", time: "11:00 AM" }, { name: "Lec 2", time: "12:15 PM" },
+        { name: "Lec 3", time: "01:30 PM" }, { name: "Break", isBreak: true },
+        { name: "Lec 4", time: "03:45 PM" }, { name: "Lec 5", time: "05:00 PM" },
+        { name: "Lec 6", time: "06:15 PM" }
+    ];
+
+    const quotes = [
+        { text: "First, solve the problem. Then, write the code." },
+        { text: "Coding is today's literacy." },
+        { text: "Experience is the name everyone gives to their mistakes." },
+        { text: "Keep shipping. Keep learning." }
+    ];
+
+    function init() {
+        document.getElementById('today-date').innerText = new Date().toDateString();
+        renderSchedule();
+        renderBacklog();
+        initChart();
+        loadNotes();
+        setInterval(() => { 
+            document.getElementById('live-clock').innerText = new Date().toLocaleTimeString(); 
+        }, 1000);
+    }
+
+    function renderSchedule() {
+        const container = document.getElementById('lecture-container');
+        container.innerHTML = '';
+        daySchedule.forEach((item) => {
+            if(item.isBreak) {
+                container.innerHTML += `<div class="lec-row" style="border: 1px dashed var(--break); color: var(--break); justify-content: center; cursor: default;">☕ BREAK</div>`;
+            } else {
+                container.innerHTML += `
+                    <div class="lec-row" onclick="toggleLecture(this)" data-name="${item.name}">
+                        <div class="comp-icon">💻</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:800; font-size: 0.9rem;">${item.name}</div>
+                            <small style="opacity:0.6; font-size: 0.75rem;">${item.time}</small>
+                        </div>
+                    </div>`;
+            }
+        });
+    }
+
+    function toggleLecture(element) {
+        element.classList.toggle('completed');
+        const count = document.querySelectorAll('.lec-row.completed').length;
+        document.getElementById('score-text').innerText = `${count}/6`;
+    }
+
+    function newQuote() {
+        const random = quotes[Math.floor(Math.random() * quotes.length)];
+        document.getElementById('quote-display').innerText = `"${random.text}"`;
+    }
+
+    function archiveDay() {
+        const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        const rows = document.querySelectorAll('.lec-row[data-name]');
+        let missed = [];
+        let count = 0;
+        
+        rows.forEach(row => {
+            if(!row.classList.contains('completed')) missed.push(row.getAttribute('data-name'));
+            else count++;
+        });
+        
+        let backlog = JSON.parse(localStorage.getItem('sf_backlog') || "[]");
+        if(missed.length > 0) backlog.push({ date: dateStr, tasks: missed });
+        localStorage.setItem('sf_backlog', JSON.stringify(backlog));
+
+        let history = JSON.parse(localStorage.getItem('sf_history') || "[]");
+        history.push({ date: dateStr, count: count });
+        localStorage.setItem('sf_history', JSON.stringify(history));
+        
+        localStorage.removeItem('sf_dev_notes');
+        location.reload();
+    }
+
+    function renderBacklog() {
+        const container = document.getElementById('backlog-container');
+        const backlog = JSON.parse(localStorage.getItem('sf_backlog') || "[]");
+        container.innerHTML = backlog.length ? '' : '<small style="color:grey">No pending tasks</small>';
+        backlog.forEach((entry, dIdx) => {
+            entry.tasks.forEach((task, tIdx) => {
+                container.innerHTML += `
+                <div class="backlog-item" onclick="clearBacklog(${dIdx}, ${tIdx})">
+                    <span>${task}</span>
+                    <span style="background:var(--danger); font-size:0.6rem; padding:2px 4px; border-radius:3px; color:white;">${entry.date}</span>
+                </div>`;
+            });
+        });
+    }
+
+    function clearBacklog(dIdx, tIdx) {
+        let bl = JSON.parse(localStorage.getItem('sf_backlog'));
+        bl[dIdx].tasks.splice(tIdx, 1);
+        if(!bl[dIdx].tasks.length) bl.splice(dIdx, 1);
+        localStorage.setItem('sf_backlog', JSON.stringify(bl));
+        renderBacklog();
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('statChart').getContext('2d');
+        const history = JSON.parse(localStorage.getItem('sf_history') || "[]").slice(-7);
+        
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        // Always render the chart object, even if data is empty
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: history.length > 0 ? history.map(h => h.date) : ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"],
+                datasets: [{ 
+                    label: 'Lectures',
+                    data: history.length > 0 ? history.map(h => h.count) : [], 
+                    borderColor: '#00f2ff', 
+                    borderWidth: 3,
+                    tension: 0.4, 
+                    fill: true, 
+                    backgroundColor: 'rgba(0,242,255,0.1)',
+                    pointBackgroundColor: '#00f2ff',
+                    pointRadius: history.length > 0 ? 4 : 0
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { beginAtZero: true, max: 6, ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: '#64748b' }, grid: { display: false } }
+                } 
+            }
+        });
+    }
+
+    function loadNotes() {
+        document.getElementById('dev-notes').value = localStorage.getItem('sf_dev_notes') || "";
+    }
+
+    function resetAllData() {
+        if(confirm("Are you sure? This will delete all History, Backlog, and Notes forever.")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    document.getElementById('dev-notes').addEventListener('input', (e) => {
+        document.getElementById('save-status').innerText = "Syncing...";
+        clearTimeout(window.saveTimer);
+        window.saveTimer = setTimeout(() => {
+            localStorage.setItem('sf_dev_notes', e.target.value);
+            document.getElementById('save-status').innerText = "Cloud Sync: Saved ✓";
+        }, 800);
+    });
+
+    init();
+</script>
+</body>
+</html>
